@@ -1,0 +1,88 @@
+// ═══════════════════════════════════════════════════════════════
+//  Qatrat Matar — Firestore Security Rules  [FIX BUG-04]
+//  انسخ هذا الملف والصقه في:
+//  Firebase Console → Firestore Database → Rules → Edit rules
+// ═══════════════════════════════════════════════════════════════
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── دوال مساعدة ──────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userRole() == 'admin';
+    }
+
+    function isStaff() {
+      return isSignedIn() && userRole() == 'staff';
+    }
+
+    function isAdminOrStaff() {
+      return isAdmin() || isStaff();
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ── المستخدمون /users/{uid} ───────────────────────────────────
+    // - العميل: يقرأ/يعدّل بياناته فقط (ما عدا role و balance)
+    // - الموظف: يقرأ أي مستخدم (للبحث بالـ QR)
+    // - المسؤول: كامل الصلاحيات
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdminOrStaff();
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+        || (isOwner(uid) && !('role' in request.resource.data.diff(resource.data).affectedKeys())
+                         && !('balance' in request.resource.data.diff(resource.data).affectedKeys()));
+      allow delete: if isAdmin();
+    }
+
+    // ── المعاملات /transactions/{txId} ───────────────────────────
+    // - العميل: يقرأ معاملاته فقط
+    // - الموظف: يُنشئ معاملة (تعبئة/شحن)
+    // - المسؤول: كامل الصلاحيات
+    match /transactions/{txId} {
+      allow read: if isAdmin() || isStaff()
+        || (isSignedIn() && resource.data.customerId == request.auth.uid);
+      allow create: if isAdminOrStaff();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── الإعدادات /settings/{doc} ─────────────────────────────────
+    // - الجميع المسجلون: قراءة (السعر وغيره)
+    // - المسؤول فقط: كتابة
+    match /settings/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── المخزون /inventory/{doc} ──────────────────────────────────
+    // - الموظف والمسؤول: قراءة وكتابة
+    match /inventory/{doc} {
+      allow read: if isAdminOrStaff();
+      allow write: if isAdminOrStaff();
+    }
+
+    // ── المهام /tasks/{taskId} ────────────────────────────────────
+    // - الموظف: يقرأ ويُحدّث الحالة
+    // - المسؤول: كامل الصلاحيات
+    match /tasks/{taskId} {
+      allow read: if isAdminOrStaff();
+      allow create, delete: if isAdmin();
+      allow update: if isAdminOrStaff();
+    }
+
+    // ── رفض أي شيء غير محدد ──────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
