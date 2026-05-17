@@ -1,17 +1,80 @@
-# qatrat_matar_app
+# تطبيق قطرة مطر (Qatrat Matar App) 💧
 
-A new Flutter project.
+تطبيق متكامل لإدارة محطات تحلية وبيع المياه، يسهل العمليات بين الإدارة، الموظفين، والعملاء.
 
-## Getting Started
+## 🌟 المميزات الرئيسية (Key Features)
 
-This project is a starting point for a Flutter application.
+### 👤 نظام الأدوار (Role-based System)
+*   **لوحة تحكم المدير (Admin Dashboard):**
+    *   مراقبة المبيعات الحقيقية وإجمالي اللترات المباعة.
+    *   إدارة الموظفين (إضافة، تعديل، إعادة تعيين كلمة المرور).
+    *   مراقبة مستوى الخزان الرئيسي وتحديث المخزون.
+    *   تحديد سعر اللتر وتعيين المهام للموظفين.
+    *   تصدير تقارير المبيعات بصيغة PDF.
+*   **شاشة الموظف (Employee/Staff):**
+    *   نظام نقطة بيع (POS) عبر مسح رمز QR الخاص بالعملاء.
+    *   تنفيذ عمليات التعبئة وخصم الرصيد.
+    *   استبدال نقاط الولاء بعمليات تعبئة مجانية.
+    *   إدارة المهام اليومية المسندة من الإدارة.
+*   **شاشة العميل (Customer):**
+    *   عرض الرصيد الحالي ونقاط الولاء.
+    *   عرض رمز QR الشخصي للتعريف السريع.
+    *   سجل العمليات (التعبئة والشحن).
 
-A few resources to get you started if this is your first Flutter project:
+### ⚙️ مميزات تقنية
+*   **تسجيل الدخول برقم الهاتف:** محاكاة بريد إلكتروني تلقائي (`phone@raindrop.jo`) لتسهيل الدخول.
+*   **نظام OTP:** التحقق من الهوية عبر رسائل النصية عند التسجيل.
+*   **دعم اللغتين:** واجهات كاملة بالعربية والإنجليزية.
+*   **قواعد بيانات سحابية:** مزامنة لحظية للبيانات عبر Firebase Firestore.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🚀 التقنيات المستخدمة (Technologies)
+
+*   **Framework:** Flutter (Dart)
+*   **Backend:** Firebase (Auth, Firestore)
+*   **QR Scanning:** `mobile_scanner`
+*   **PDF Generation:** `pdf`, `printing`
+*   **State Management:** `StatefulWidget` مع `StreamBuilder` للتحديثات اللحظية.
+
+---
+
+## 📂 هيكلة المشروع (Project Structure)
+
+```text
+lib/
+├── models/         # نماذج البيانات (User, Transaction)
+├── screens/        # شاشات التطبيق (Admin, Employee, Login, etc.)
+├── services/       # الخدمات (Auth, Database, PDF Service)
+├── widgets/        # العناصر المشتركة
+├── theme.dart      # الهوية البصرية والتنسيق
+└── main.dart       # نقطة انطلاق التطبيق
+```
+
+---
+
+## 🛠️ التثبيت والتشغيل (Installation)
+
+1.  **تثبيت التبعيات:**
+    ```bash
+    flutter pub get
+    ```
+2.  **إعداد Firebase:**
+    *   يجب ربط المشروع بـ Firebase Console.
+    *   إضافة ملف `google-services.json` لنظام Android.
+3.  **التشغيل:**
+    ```bash
+    flutter run
+    ```
+
+---
+
+## 📄 ملاحظات هامة
+*   يتم توحيد أرقام الهواتف تلقائياً لمنع تكرار الحسابات.
+*   نظام شحن الرصيد يتم حصراً من قبل الإدارة لضمان الأمان المالي.
+*   تتطلب عملية تغيير كلمة المرور إعادة مصادقة (Re-authentication) كإجراء أمني.
+
+---
+
+**تم التطوير بواسطة: عبدالله اخميس**  
+**Project Name:** `qatrat_matar_app`
