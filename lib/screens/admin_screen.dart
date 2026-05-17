@@ -244,7 +244,10 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      nameC.dispose();
+      phoneC.dispose();
+    });
   }
 
   void _showAddStaffDialog() {
@@ -282,7 +285,11 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      nameC.dispose();
+      phoneC.dispose();
+      passC.dispose();
+    });
   }
 
   Widget _buildDashboard(bool isMobile) {
@@ -612,10 +619,33 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  Widget _buildTasksSection(bool isMobile) {
+  void _showAddTaskDialog() {
     final titleC = TextEditingController();
     final descC = TextEditingController();
 
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إضافة مهمة جديدة'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: titleC, decoration: const InputDecoration(labelText: 'عنوان المهمة')),
+            TextField(controller: descC, decoration: const InputDecoration(labelText: 'التفاصيل')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          ElevatedButton(onPressed: () { _dbService.createTask(titleC.text, descC.text); Navigator.pop(context); }, child: const Text('إرسال')),
+        ],
+      ),
+    ).then((_) {
+      titleC.dispose();
+      descC.dispose();
+    });
+  }
+
+  Widget _buildTasksSection(bool isMobile) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -626,23 +656,7 @@ class _AdminScreenState extends State<AdminScreen> {
             children: [
               const Text('إدارة مهام الموظفين', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               ElevatedButton.icon(
-                onPressed: () => showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('إضافة مهمة جديدة'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextField(controller: titleC, decoration: const InputDecoration(labelText: 'عنوان المهمة')),
-                        TextField(controller: descC, decoration: const InputDecoration(labelText: 'التفاصيل')),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-                      ElevatedButton(onPressed: () { _dbService.createTask(titleC.text, descC.text); Navigator.pop(context); }, child: const Text('إرسال')),
-                    ],
-                  ),
-                ),
+                onPressed: _showAddTaskDialog,
                 icon: const Icon(Icons.add_task),
                 label: const Text('إرسال مهمة'),
               ),

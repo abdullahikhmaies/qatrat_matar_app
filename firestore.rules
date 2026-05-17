@@ -38,7 +38,12 @@ service cloud.firestore {
     // - المسؤول: كامل الصلاحيات
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdminOrStaff();
-      allow create: if isAdmin();
+      allow create: if isAdmin() || (
+        isOwner(uid) 
+        && request.resource.data.role == 'customer' 
+        && request.resource.data.balance == 0 
+        && request.resource.data.points == 0
+      );
       allow update: if isAdmin()
         || (isOwner(uid) && !('role' in request.resource.data.diff(resource.data).affectedKeys())
                          && !('balance' in request.resource.data.diff(resource.data).affectedKeys()));
