@@ -8,6 +8,9 @@ class UserModel {
   final UserRole role;
   final double balance;
   final int points;
+  final int? coupons;
+  final String? lastFillDate;
+  final double? lastFillVolume;
 
   UserModel({
     required this.id,
@@ -17,6 +20,9 @@ class UserModel {
     required this.role,
     this.balance = 0.0,
     this.points = 0,
+    this.coupons,
+    this.lastFillDate,
+    this.lastFillVolume,
   });
 
   Map<String, dynamic> toMap() {
@@ -28,6 +34,9 @@ class UserModel {
       'role': role.toString().split('.').last,
       'balance': balance,
       'points': points,
+      if (coupons != null) 'coupons': coupons,
+      if (lastFillDate != null) 'lastFillDate': lastFillDate,
+      if (lastFillVolume != null) 'lastFillVolume': lastFillVolume,
     };
   }
 
@@ -43,6 +52,9 @@ class UserModel {
       ),
       balance: (map['balance'] ?? 0.0).toDouble(),
       points: map['points'] ?? 0,
+      coupons: map['coupons'] as int?,
+      lastFillDate: map['lastFillDate'] as String?,
+      lastFillVolume: (map['lastFillVolume'] as num?)?.toDouble(),
     );
   }
 }

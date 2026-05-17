@@ -22,19 +22,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  // [FIX BUG-03] تنفيذ إعادة تعيين كلمة المرور عبر Firebase حقيقياً
   Future<void> _handleSendReset() async {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال رقم الهاتف')),
-      );
+      _showSnackBar('يرجى إدخال رقم الهاتف', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      // تحويل رقم الهاتف إلى البريد الوهمي المستخدم في Firebase
       final normalized = DatabaseService.normalizePhone(phone);
       final email = '$normalized@raindrop.jo';
 
@@ -43,209 +39,333 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const VerificationSuccessScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const VerificationSuccessScreen()),
       );
     } on Exception catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: ${e.toString().replaceAll('Exception: ', '')}')),
-      );
+      _showSnackBar(e.toString().replaceAll('Exception: ', ''), isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'قطرة مطر',
-          style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.primary),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const SizedBox(height: 40),
-              Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE8F1FF),
-                  shape: BoxShape.circle,
-                ),
-                child:
-                    const Icon(Icons.water_drop, color: AppTheme.primary, size: 50),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'استعادة كلمة المرور',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'أدخل رقم الهاتف المسجل لإرسال رابط إعادة التعيين',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 40),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Text(
-                      'رقم الهاتف',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _phoneController,
-                      textAlign: TextAlign.right,
-                      keyboardType: TextInputType.phone,
-                      enabled: !_isLoading,
-                      decoration: InputDecoration(
-                        hintText: '07XXXXXXXX',
-                        suffixIcon:
-                            const Icon(Icons.phone_outlined, color: Colors.grey),
-                        filled: true,
-                        fillColor: Colors.white,
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: BorderSide(color: Colors.grey[200]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(color: AppTheme.primary),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Container(
-                      width: double.infinity,
-                      height: 55,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF006D8E), Color(0xFF004D66)],
-                        ),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleSendReset,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30)),
-                        ),
-                        child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(Icons.send, color: Colors.white, size: 20),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'إرسال رابط إعادة التعيين',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                'هل تحتاج إلى مساعدة؟ اتصل بالدعم',
-                style: TextStyle(color: AppTheme.primary, fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildSupportAction(
-                          'محادثة\nدردشة فورية', Icons.chat_bubble_outline)),
-                  const SizedBox(width: 16),
-                  Expanded(
-                      child: _buildSupportAction(
-                          'اتصال\nخدمة العملاء', Icons.phone_in_talk_outlined)),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
+  void _showSnackBar(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.right),
+        backgroundColor: isError ? AppTheme.error : AppTheme.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  Widget _buildSupportAction(String title, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Stack(
         children: [
-          Expanded(
-            child: Text(
-              title,
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 12, color: Colors.black),
+          Container(
+            decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                // شريط العنوان
+                _buildAppBar(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 40),
+                        // أيقونة وعنوان
+                        _buildHeader(),
+                        const SizedBox(height: 40),
+                        // بطاقة النموذج
+                        _buildFormCard(),
+                        const SizedBox(height: 32),
+                        // خيارات الدعم
+                        _buildSupportSection(),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F1FF),
-              borderRadius: BorderRadius.circular(10),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Image.asset('assets/logo.png', height: 36),
+          Row(
+            children: [
+              Text(
+                'قطرة مطر',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Container(
+          width: 90,
+          height: 90,
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withValues(alpha: 0.3),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.lock_reset_rounded,
+            color: Colors.white,
+            size: 42,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'استعادة كلمة المرور',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'أدخل رقم هاتفك المسجل\nوسنرسل لك رابط إعادة تعيين',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.grey[500],
+            fontSize: 14,
+            height: 1.6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFormCard() {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.07),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text(
+            'رقم الهاتف',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.primary,
+              fontWeight: FontWeight.bold,
             ),
-            child: Icon(icon, color: AppTheme.primary, size: 20),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _phoneController,
+            textAlign: TextAlign.right,
+            keyboardType: TextInputType.phone,
+            enabled: !_isLoading,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            decoration: InputDecoration(
+              hintText: '07XXXXXXXX',
+              hintStyle: TextStyle(color: Colors.grey[350], fontSize: 14),
+              suffixIcon: Icon(
+                Icons.phone_outlined,
+                color: AppTheme.primary.withValues(alpha: 0.5),
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+          Container(
+            width: double.infinity,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: AppTheme.primaryGradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withValues(alpha: 0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _handleSendReset,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                        SizedBox(width: 10),
+                        Text(
+                          'إرسال رابط إعادة التعيين',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupportSection() {
+    return Column(
+      children: [
+        Text(
+          'هل تحتاج إلى مساعدة؟',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSupportCard(
+                'دردشة فورية',
+                'محادثة',
+                Icons.chat_bubble_outline_rounded,
+                AppTheme.secondary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSupportCard(
+                'خدمة العملاء',
+                'اتصال',
+                Icons.phone_in_talk_rounded,
+                AppTheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSupportCard(
+    String subtitle,
+    String title,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: color,
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
           ),
         ],
       ),

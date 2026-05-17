@@ -17,18 +17,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _otpController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
-  
+
   int _currentStep = 0; // 0: Info, 1: OTP, 2: Password
   bool _isLoading = false;
   String _verificationId = "";
-  // [FIX L-01] تغيير من final إلى متغير ليسمح بتبديل إظهار/إخفاء كلمة المرور
   bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _otpController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void _handleSendOTP() async {
     if (_nameController.text.isEmpty || _phoneController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال الاسم ورقم الهاتف')),
-      );
+      _showSnackBar('يرجى إدخال الاسم ورقم الهاتف', isError: true);
       return;
     }
 
@@ -39,9 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (exists) {
         if (!mounted) return;
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('رقم الهاتف مسجل بالفعل')),
-        );
+        _showSnackBar('رقم الهاتف مسجل بالفعل', isError: true);
         return;
       }
 
@@ -58,193 +62,420 @@ class _SignUpScreenState extends State<SignUpScreen> {
         onFailed: (e) {
           if (!mounted) return;
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('فشل إرسال الرمز: ${e.message}')),
-          );
+          _showSnackBar('فشل إرسال الرمز: ${e.message}', isError: true);
         },
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      _showSnackBar('خطأ: $e', isError: true);
     }
   }
 
   void _handleVerifyOTP() async {
-    if (_otpController.text.length < 6) return;
+    if (_otpController.text.length < 6) {
+      _showSnackBar('يرجى إدخال رمز مكون من 6 أرقام', isError: true);
+      return;
+    }
 
     setState(() => _isLoading = true);
     bool success = await _authService.verifyOTP(
       verificationId: _verificationId,
       smsCode: _otpController.text.trim(),
     );
-
     setState(() => _isLoading = false);
 
     if (success) {
       if (mounted) setState(() => _currentStep = 2);
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('رمز التحقق غير صحيح')),
-        );
-      }
+      if (mounted) _showSnackBar('رمز التحقق غير صحيح', isError: true);
     }
   }
 
   void _handleFinalSignUp() async {
-    if (_passwordController.text.length < 6) return;
+    if (_passwordController.text.length < 6) {
+      _showSnackBar('كلمة المرور يجب أن تكون 6 أحرف على الأقل', isError: true);
+      return;
+    }
 
     setState(() => _isLoading = true);
-    
+
     try {
       UserModel? userModel = await _authService.signUpCustomer(
         password: _passwordController.text.trim(),
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
       );
-      
-      if (userModel != null) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const CompleteProfileScreen()),
-          );
-        }
+
+      if (userModel != null && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const CompleteProfileScreen()),
+        );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e')),
-      );
+      _showSnackBar('خطأ: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  void _showSnackBar(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, textAlign: TextAlign.right),
+        backgroundColor: isError ? AppTheme.error : AppTheme.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text('إنشاء حساب', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.primary),
-          onPressed: () {
-            if (_currentStep > 0) {
-              setState(() => _currentStep--);
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
-      ),
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFE8F1FF), Colors.white],
-            stops: [0.0, 0.3],
+      backgroundColor: AppTheme.background,
+      body: Stack(
+        children: [
+          // خلفية
+          Container(
+            decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
           ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20)],
+          SafeArea(
+            child: Column(
+              children: [
+                // شريط العنوان المخصص
+                _buildCustomAppBar(),
+                // مؤشر الخطوات
+                _buildStepIndicator(),
+                // المحتوى
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        // أيقونة الخطوة
+                        _buildStepIcon(),
+                        const SizedBox(height: 24),
+                        // بطاقة النموذج
+                        _buildFormCard(),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (_currentStep == 0) ...[
-                      _buildLabel('الاسم الكامل'),
-                      _buildTextField(_nameController, 'أدخل اسمك بالكامل', Icons.person_outline),
-                      const SizedBox(height: 20),
-                      _buildLabel('رقم الهاتف'),
-                      _buildTextField(_phoneController, '07XXXXXXXX', Icons.phone_outlined, keyboardType: TextInputType.phone),
-                    ] else if (_currentStep == 1) ...[
-                      const Center(child: Text('تم إرسال رمز التحقق إلى رقمك', style: TextStyle(color: Colors.grey))),
-                      const SizedBox(height: 20),
-                      _buildLabel('رمز التحقق'),
-                      _buildTextField(_otpController, 'أدخل الرمز (6 أرقام)', Icons.lock_clock_outlined, keyboardType: TextInputType.number),
-                    ] else ...[
-                      _buildLabel('كلمة المرور'),
-                      _buildTextField(_passwordController, '........', Icons.lock_outline, isPassword: true),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomAppBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // اللوغو
+          Image.asset('assets/logo.png', height: 36),
+          // عنوان وزر رجوع
+          Row(
+            children: [
+              Text(
+                'إنشاء حساب',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  if (_currentStep > 0) {
+                    setState(() => _currentStep--);
+                  } else {
+                    Navigator.pop(context);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 10,
+                      ),
                     ],
-                    const SizedBox(height: 32),
-                    _buildActionButton(),
-                  ],
+                  ),
+                  child: const Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.primary),
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepIndicator() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(40, 20, 40, 0),
+      child: Row(
+        children: List.generate(3, (index) {
+          final isActive = index <= _currentStep;
+          final isCurrent = index == _currentStep;
+          return Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    height: isCurrent ? 6 : 4,
+                    decoration: BoxDecoration(
+                      color: isActive ? AppTheme.primary : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                if (index < 2) const SizedBox(width: 6),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildStepIcon() {
+    final List<IconData> icons = [
+      Icons.person_outline_rounded,
+      Icons.sms_outlined,
+      Icons.lock_outline_rounded,
+    ];
+    final List<String> titles = [
+      'معلوماتك الشخصية',
+      'التحقق من الهاتف',
+      'كلمة المرور',
+    ];
+    final List<String> subtitles = [
+      'أدخل اسمك ورقم هاتفك',
+      'تم إرسال رمز التحقق إلى رقمك',
+      'اختر كلمة مرور قوية',
+    ];
+
+    return Column(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            gradient: AppTheme.primaryGradient,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Icon(icons[_currentStep], color: Colors.white, size: 36),
         ),
+        const SizedBox(height: 16),
+        Text(
+          titles[_currentStep],
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitles[_currentStep],
+          style: TextStyle(color: Colors.grey[500], fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFormCard() {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.07),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (_currentStep == 0) ...[
+            _buildLabel('الاسم الكامل'),
+            _buildTextField(_nameController, 'أدخل اسمك بالكامل', Icons.person_outline),
+            const SizedBox(height: 20),
+            _buildLabel('رقم الهاتف'),
+            _buildTextField(
+              _phoneController,
+              '07XXXXXXXX',
+              Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+            ),
+          ] else if (_currentStep == 1) ...[
+            _buildLabel('رمز التحقق'),
+            // حقل OTP مميز
+            _buildOTPField(),
+          ] else ...[
+            _buildLabel('كلمة المرور'),
+            _buildTextField(
+              _passwordController,
+              '••••••••',
+              Icons.lock_outline,
+              isPassword: true,
+            ),
+          ],
+          const SizedBox(height: 32),
+          _buildActionButton(),
+        ],
       ),
     );
   }
 
   Widget _buildLabel(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        color: AppTheme.primary,
+        fontSize: 14,
+      ),
+    ),
   );
 
-  Widget _buildTextField(TextEditingController controller, String hint, IconData icon, {bool isPassword = false, TextInputType keyboardType = TextInputType.text}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hint,
+    IconData icon, {
+    bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return TextField(
       controller: controller,
       obscureText: isPassword && _obscurePassword,
       textAlign: TextAlign.right,
       keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 15),
       decoration: InputDecoration(
         hintText: hint,
-        suffixIcon: Icon(icon, color: Colors.grey[400]),
-        prefixIcon: isPassword 
-          ? IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey[400], size: 20),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-            ) 
-          : null,
-        filled: true, fillColor: Colors.white,
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: Colors.grey[200]!)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: AppTheme.primary)),
+        hintStyle: TextStyle(color: Colors.grey[350], fontSize: 14),
+        suffixIcon: Icon(icon, color: AppTheme.primary.withValues(alpha: 0.5), size: 20),
+        prefixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildOTPField() {
+    return TextField(
+      controller: _otpController,
+      textAlign: TextAlign.center,
+      keyboardType: TextInputType.number,
+      maxLength: 6,
+      style: const TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 8,
+        color: AppTheme.primary,
+      ),
+      decoration: InputDecoration(
+        counterText: '',
+        hintText: '------',
+        hintStyle: TextStyle(
+          color: Colors.grey[300],
+          fontSize: 22,
+          letterSpacing: 8,
+        ),
       ),
     );
   }
 
   Widget _buildActionButton() {
+    final List<String> labels = [
+      'إرسال رمز التحقق',
+      'تحقق من الرمز',
+      'إنشاء الحساب',
+    ];
+
     return Container(
-      width: double.infinity, height: 55,
+      width: double.infinity,
+      height: 56,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
-        gradient: const LinearGradient(colors: [Color(0xFF1A4D8C), Color(0xFF2E5E9E)]),
+        gradient: AppTheme.primaryGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: ElevatedButton(
-        onPressed: _isLoading ? null : () {
-          if (_currentStep == 0) {
-            _handleSendOTP();
-          } else if (_currentStep == 1) {
-            _handleVerifyOTP();
-          } else {
-            _handleFinalSignUp();
-          }
-        },
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent),
-        child: _isLoading 
-          ? const CircularProgressIndicator(color: Colors.white)
-          : Text(_currentStep == 0 ? 'إرسال رمز التحقق' : (_currentStep == 1 ? 'تحقق' : 'إنشاء الحساب'),
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        onPressed: _isLoading
+            ? null
+            : () {
+                if (_currentStep == 0) {
+                  _handleSendOTP();
+                } else if (_currentStep == 1) {
+                  _handleVerifyOTP();
+                } else {
+                  _handleFinalSignUp();
+                }
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    labels[_currentStep],
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                ],
+              ),
       ),
     );
   }
