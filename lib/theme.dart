@@ -75,6 +75,7 @@ class AppTheme {
   static const Color success         = Color(0xFF22C55E);
   static const Color warning         = Color(0xFFF59E0B);
   static const Color info            = Color(0xFF3BAED6); // sky blue water
+  static const Color shadow          = Color(0xFF000000);
 
   // ── Brand Specific (override primary) ──────────────────────────
   static const Color brandNavy       = Color(0xFF1A4D8C); // primaryContainer
