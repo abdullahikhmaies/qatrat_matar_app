@@ -47,7 +47,7 @@ class _AdminScreenState extends State<AdminScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: const Color(0xFFF4F7FE),
+        backgroundColor: AppTheme.background,
         appBar: isMobile
             ? AppBar(
                 backgroundColor: Colors.white,
@@ -98,8 +98,9 @@ class _AdminScreenState extends State<AdminScreen> {
           leading: const Icon(Icons.logout, color: Colors.redAccent),
           title: const Text('تسجيل الخروج', style: TextStyle(color: Colors.redAccent)),
           onTap: () async {
+            final nav = Navigator.of(context);
             await _authService.signOut();
-            if (mounted) Navigator.of(context).pushReplacementNamed('/');
+            nav.pushReplacementNamed('/');
           },
         ),
         const SizedBox(height: 24),
@@ -115,7 +116,7 @@ class _AdminScreenState extends State<AdminScreen> {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE0E7FF).withValues(alpha: 0.5) : Colors.transparent,
+          color: isSelected ? AppTheme.primary.withValues(alpha: 0.08) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -218,9 +219,9 @@ class _AdminScreenState extends State<AdminScreen> {
             const SizedBox(height: 24),
             TextButton.icon(
               onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 await _authService.sendPasswordReset(staff.email);
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال رابط تعيين كلمة المرور لبريد الموظف')));
+                messenger.showSnackBar(const SnackBar(content: Text('تم إرسال رابط تعيين كلمة المرور لبريد الموظف')));
               },
               icon: const Icon(Icons.lock_reset, size: 18),
               label: const Text('إرسال رابط إعادة تعيين كلمة المرور'),
@@ -229,16 +230,16 @@ class _AdminScreenState extends State<AdminScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          ElevatedButton(
-            onPressed: () async {
-              await _authService.updateStaffProfile(
-                uid: staff.id,
-                name: nameC.text,
-                phone: phoneC.text,
-              );
-              if (!mounted) return;
-              Navigator.pop(context);
-            },
+            ElevatedButton(
+              onPressed: () async {
+                final nav = Navigator.of(context);
+                await _authService.updateStaffProfile(
+                  uid: staff.id,
+                  name: nameC.text,
+                  phone: phoneC.text,
+                );
+                nav.pop();
+              },
             child: const Text('حفظ التعديلات'),
           ),
         ],
@@ -265,18 +266,18 @@ class _AdminScreenState extends State<AdminScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          ElevatedButton(
-            onPressed: () async {
-              String normalizedPhone = DatabaseService.normalizePhone(phoneC.text);
-              await _authService.addStaffByAdmin(
-                email: "$normalizedPhone@raindrop.jo",
-                password: passC.text,
-                name: nameC.text,
-                phone: normalizedPhone
-              );
-              if (!mounted) return;
-              Navigator.pop(context);
-            },
+            ElevatedButton(
+              onPressed: () async {
+                final nav = Navigator.of(context);
+                String normalizedPhone = DatabaseService.normalizePhone(phoneC.text);
+                await _authService.addStaffByAdmin(
+                  email: "$normalizedPhone@raindrop.jo",
+                  password: passC.text,
+                  name: nameC.text,
+                  phone: normalizedPhone
+                );
+                nav.pop();
+              },
             child: const Text('إضافة'),
           ),
         ],
@@ -297,7 +298,7 @@ class _AdminScreenState extends State<AdminScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('لوحة التحكم الحقيقية', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1B2559))),
+                  const Text('لوحة التحكم الحقيقية', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
                   StreamBuilder<List<TransactionModel>>(
                     stream: _dbService.getAllTransactions(),
                     builder: (context, txSnapshot) {
@@ -389,14 +390,15 @@ class _AdminScreenState extends State<AdminScreen> {
                         double? amount = double.tryParse(_topUpAmountController.text);
                         if (amount == null || amount <= 0) return;
                         
+                        final messenger = ScaffoldMessenger.of(context);
+                        
                         await _dbService.topUpBalance(
                           _foundCustomer!.id, 
                           amount, 
                           FirebaseAuth.instance.currentUser!.uid
                         );
                         
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم شحن الرصيد بنجاح')));
+                        messenger.showSnackBar(const SnackBar(content: Text('تم شحن الرصيد بنجاح')));
                         _topUpPhoneController.clear();
                         _topUpAmountController.clear();
                         setState(() => _foundCustomer = null);
@@ -449,9 +451,9 @@ class _AdminScreenState extends State<AdminScreen> {
                         onPressed: () async {
                           double? p = double.tryParse(_priceController.text);
                           if (p != null) {
+                            final messenger = ScaffoldMessenger.of(context);
                             await _dbService.updatePrice(p);
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث السعر بنجاح')));
+                            messenger.showSnackBar(const SnackBar(content: Text('تم تحديث السعر بنجاح')));
                           }
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
@@ -535,7 +537,7 @@ class _AdminScreenState extends State<AdminScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1B2559))),
+          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
           const SizedBox(height: 8),
           Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
         ],
@@ -573,7 +575,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           duration: const Duration(seconds: 1),
                           width: 142, height: 242 * percentage,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [Colors.blue, Color(0xFF1A4D8C)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                            gradient: AppTheme.primaryGradient,
                             borderRadius: BorderRadius.only(bottomLeft: const Radius.circular(16), bottomRight: const Radius.circular(16), 
                             topLeft: Radius.circular(percentage > 0.95 ? 16 : 0), topRight: Radius.circular(percentage > 0.95 ? 16 : 0)),
                           ),

@@ -138,10 +138,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       backgroundColor: AppTheme.background,
       body: Stack(
         children: [
-          // خلفية
-          Container(
-            decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
-          ),
+          // خلفية متدرجة مع فقاعات ماء زخرفية
+          _buildBackground(),
           SafeArea(
             child: Column(
               children: [
@@ -168,6 +166,58 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBackground() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(gradient: AppTheme.backgroundGradient),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -30,
+            right: -20,
+            child: _buildBubble(120, const Color(0x1A1A4D8C)),
+          ),
+          Positioned(
+            top: 80,
+            right: 30,
+            child: _buildBubble(50, const Color(0x151A4D8C)),
+          ),
+          Positioned(
+            top: 60,
+            left: -30,
+            child: _buildBubble(80, const Color(0x101A4D8C)),
+          ),
+          Positioned(
+            bottom: 150,
+            left: -40,
+            child: _buildBubble(140, const Color(0x0A1A4D8C)),
+          ),
+          Positioned(
+            bottom: 80,
+            right: -10,
+            child: _buildBubble(70, const Color(0x121A4D8C)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBubble(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        border: Border.all(
+          color: AppTheme.primary.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
     );
   }

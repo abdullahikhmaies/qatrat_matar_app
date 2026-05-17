@@ -516,7 +516,7 @@ class HomeScreen extends StatelessWidget {
             context,
             icon: Icons.local_shipping_outlined,
             title: 'توصيل سريع',
-            color: const Color(0xFF22C55E),
+            color: AppTheme.success,
             onTap: () {},
           ),
         ),
