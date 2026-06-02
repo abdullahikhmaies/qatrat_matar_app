@@ -19,6 +19,10 @@ class EmployeeScreen extends StatefulWidget {
 class _EmployeeScreenState extends State<EmployeeScreen> {
   final DatabaseService _dbService = DatabaseService();
   final AuthService _authService = AuthService();
+  // [FIX #1] Controller صريح لإغلاق الكاميرا وتحرير native resources
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
   UserModel? _scannedCustomer;
   bool _isProcessing = false;
   double _litersToFill = 19.0;
@@ -33,6 +37,7 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
 
   @override
   void dispose() {
+    _scannerController.dispose(); // [FIX #1] إغلاق الكاميرا وتحرير الذاكرة
     _settingsSubscription?.cancel();
     super.dispose();
   }
@@ -52,15 +57,19 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
       if (barcode.rawValue != null) {
+        if (!mounted) return;
         setState(() => _isProcessing = true);
-        UserModel? customer = await _dbService.getUserById(barcode.rawValue!);
+        final UserModel? customer = await _dbService.getUserById(barcode.rawValue!);
+        // [FIX #9] تحقق من mounted بعد كل await قبل استخدام context أو setState
+        if (!mounted) return;
         setState(() {
           _scannedCustomer = customer;
           _isProcessing = false;
         });
         if (customer == null) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('عذراً، لم يتم العثور على العميل')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('عذراً، لم يتم العثور على العميل')),
+          );
         }
         break;
       }
@@ -230,7 +239,8 @@ class _EmployeeScreenState extends State<EmployeeScreen> {
                   aspectRatio: 1,
                   child: Container(
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32), border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)), boxShadow: AppTheme.cardShadow),
-                    child: ClipRRect(borderRadius: BorderRadius.circular(32), child: MobileScanner(onDetect: _onDetect)),
+                    // [FIX #1] ربط الـ controller الصريح بالـ MobileScanner
+                child: ClipRRect(borderRadius: BorderRadius.circular(32), child: MobileScanner(controller: _scannerController, onDetect: _onDetect)),
                   ),
                 ),
                 const SizedBox(height: 16),

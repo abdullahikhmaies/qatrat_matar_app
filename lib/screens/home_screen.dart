@@ -8,13 +8,21 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+// [FIX #2] تحويل إلى StatefulWidget لإنشاء AuthService مرة واحدة فقط
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // [FIX #2] يُنشأ مرة واحدة فقط طول حياة الـ Widget وليس في كل rebuild
+  final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final AuthService authService = AuthService();
 
     if (user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,7 +75,7 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     // شريط العنوان
-                    _buildAppBar(context, authService, userData),
+                    _buildAppBar(context, userData),
                     // المحتوى الرئيسي
                     Expanded(
                       child: SingleChildScrollView(
@@ -101,7 +109,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppBar(BuildContext context, AuthService authService, UserModel userData) {
+  Widget _buildAppBar(BuildContext context, UserModel userData) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Row(
@@ -477,11 +485,11 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                // شريط التقدم
+                // [FIX #8] قيمة حقيقية محسوبة بدل 0.65 الثابتة
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: 0.65,
+                    value: ((userData.lastFillVolume ?? 0) / 19.0).clamp(0.0, 1.0),
                     backgroundColor: AppTheme.primaryContainer,
                     valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.secondary),
                     minHeight: 6,

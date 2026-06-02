@@ -184,28 +184,6 @@ class DatabaseService {
 
   // --- Statistics & Settings ---
 
-  // جلب إحصائيات لوحة التحكم
-  Stream<Map<String, dynamic>> getAdminStats() {
-    return _db.collection('transactions').snapshots().map((snapshot) {
-      double totalSales = 0;
-      double totalLiters = 0;
-      int refillCount = 0;
-
-      for (var doc in snapshot.docs) {
-        Map<String, dynamic> data = doc.data();
-        if (data['type'] == 'refill') {
-          totalSales += (data['amount'] ?? 0.0).toDouble();
-          totalLiters += (data['liters'] ?? 0.0).toDouble();
-          refillCount++;
-        }
-      }
-      return {
-        'totalSales': totalSales,
-        'totalLiters': totalLiters,
-        'transactions': refillCount,
-      };
-    });
-  }
 
   // جلب إعدادات التطبيق (مثل سعر اللتر)
   Stream<DocumentSnapshot> getAppSettings() {
@@ -235,6 +213,7 @@ class DatabaseService {
             .toList());
   }
 
+  // [FIX #10] limit(50) موجود بالفعل — يمنع قراءة آلاف السجلات من Firestore
   Stream<List<TransactionModel>> getAllTransactions() {
     return _db
         .collection('transactions')
@@ -245,4 +224,5 @@ class DatabaseService {
             .map((doc) => TransactionModel.fromMap(doc.data()))
             .toList());
   }
+
 }

@@ -62,7 +62,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         onFailed: (e) {
           if (!mounted) return;
           setState(() => _isLoading = false);
-          _showSnackBar('فشل إرسال الرمز: ${e.message}', isError: true);
+          _showSnackBar('فشل إرسال الرمز: ${e.message ?? 'خطأ غير معروف'}', isError: true);
         },
       );
     } catch (e) {
@@ -83,6 +83,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       verificationId: _verificationId,
       smsCode: _otpController.text.trim(),
     );
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success) {

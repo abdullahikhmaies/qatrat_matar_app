@@ -51,19 +51,19 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBxb4n07wCmRiUCV_f_yj9Nl5mof9XLvFo',
-    appId: '1:903678318996:android:953147fdefc7e3413dd781',
-    messagingSenderId: '903678318996',
-    projectId: 'raindrop-bb024',
-    storageBucket: 'raindrop-bb024.firebasestorage.app',
+    apiKey: 'AIzaSyCRu0WulUHgUgtEET0EGKmZSJSGAiUfEdY',
+    appId: '1:907781091981:android:6f599bc915115623f6a8c4',
+    messagingSenderId: '907781091981',
+    projectId: 'qatrat-matar',
+    storageBucket: 'qatrat-matar.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAZZQiNxcws04qU28kuLHSwUfCfkiJKoq4',
-    appId: '1:903678318996:ios:47b17baa715981ad3dd781',
-    messagingSenderId: '903678318996',
-    projectId: 'raindrop-bb024',
-    storageBucket: 'raindrop-bb024.firebasestorage.app',
+    apiKey: 'AIzaSyCzwxzHmN1_xEJVHgcxQUB8fuwdr0KpEyY',
+    appId: '1:907781091981:ios:b88de9aa9091322ef6a8c4',
+    messagingSenderId: '907781091981',
+    projectId: 'qatrat-matar',
+    storageBucket: 'qatrat-matar.firebasestorage.app',
     iosBundleId: 'com.qatratmatar.qatratMatarApp',
   );
 

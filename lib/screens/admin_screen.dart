@@ -27,9 +27,22 @@ class _AdminScreenState extends State<AdminScreen> {
   final TextEditingController _topUpAmountController = TextEditingController();
   UserModel? _foundCustomer;
   bool _isSearching = false;
+  bool _isTopUpLoading = false; // [FIX #4] حالة loading للشحن المالي
 
   // Controller for Settings
   final TextEditingController _priceController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // [FIX #6] تحميل سعر اللتر مرة واحدة في initState بدل تعديل controller داخل builder
+    _dbService.getAppSettings().first.then((snapshot) {
+      if (snapshot.exists && mounted && _priceController.text.isEmpty) {
+        final price = (snapshot.get('price_per_liter') as num?)?.toDouble() ?? 0.026;
+        _priceController.text = price.toString();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -230,16 +243,17 @@ class _AdminScreenState extends State<AdminScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-            ElevatedButton(
-              onPressed: () async {
-                final nav = Navigator.of(context);
-                await _authService.updateStaffProfile(
-                  uid: staff.id,
-                  name: nameC.text,
-                  phone: phoneC.text,
-                );
-                nav.pop();
-              },
+          ElevatedButton(
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              await _authService.updateStaffProfile(
+                uid: staff.id,
+                name: nameC.text,
+                phone: phoneC.text,
+              );
+              if (!mounted) return;
+              nav.pop();
+            },
             child: const Text('حفظ التعديلات'),
           ),
         ],
@@ -270,16 +284,26 @@ class _AdminScreenState extends State<AdminScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
+              // [FIX #9] إضافة try-catch ومounted check بعد await
               onPressed: () async {
                 final nav = Navigator.of(context);
-                String normalizedPhone = DatabaseService.normalizePhone(phoneC.text);
-                await _authService.addStaffByAdmin(
-                  email: "$normalizedPhone@raindrop.jo",
-                  password: passC.text,
-                  name: nameC.text,
-                  phone: normalizedPhone
-                );
-                nav.pop();
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  final String normalizedPhone = DatabaseService.normalizePhone(phoneC.text);
+                  await _authService.addStaffByAdmin(
+                    email: "$normalizedPhone@raindrop.jo",
+                    password: passC.text,
+                    name: nameC.text,
+                    phone: normalizedPhone,
+                  );
+                  if (!context.mounted) return;
+                  nav.pop();
+                } catch (e) {
+                  if (!context.mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('❌ خطأ: ${e.toString()}'), backgroundColor: Colors.red),
+                  );
+                }
               },
             child: const Text('إضافة'),
           ),
@@ -293,10 +317,17 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Widget _buildDashboard(bool isMobile) {
-    return StreamBuilder<Map<String, dynamic>>(
-      stream: _dbService.getAdminStats(),
+    // [FIX #3] stream واحد فقط بدل nested streams على نفس الكولكشن
+    return StreamBuilder<List<TransactionModel>>(
+      stream: _dbService.getAllTransactions(),
       builder: (context, snapshot) {
-        var stats = snapshot.data ?? {'totalSales': 0.0, 'totalLiters': 0.0, 'transactions': 0};
+        final transactions = snapshot.data ?? [];
+        // حساب الإحصائيات محلياً بدل stream منفصل لـ getAdminStats
+        final refills = transactions.where((t) => t.type == 'refill').toList();
+        final totalSales = refills.fold<double>(0, (acc, t) => acc + t.amount);
+        final totalLiters = refills.fold<double>(0, (acc, t) => acc + t.liters);
+        final refillCount = refills.length;
+
         return SingleChildScrollView(
           padding: EdgeInsets.all(isMobile ? 16 : 32),
           child: Column(
@@ -306,16 +337,13 @@ class _AdminScreenState extends State<AdminScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('لوحة التحكم الحقيقية', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.onSurface)),
-                  StreamBuilder<List<TransactionModel>>(
-                    stream: _dbService.getAllTransactions(),
-                    builder: (context, txSnapshot) {
-                      return ElevatedButton.icon(
-                        onPressed: () => txSnapshot.hasData ? PdfService.generateSalesReport(txSnapshot.data!) : null,
-                        icon: const Icon(Icons.picture_as_pdf),
-                        label: const Text('تصدير تقرير المبيعات'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
-                      );
-                    }
+                  ElevatedButton.icon(
+                    onPressed: transactions.isNotEmpty
+                        ? () => PdfService.generateSalesReport(transactions)
+                        : null,
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: const Text('تصدير تقرير المبيعات'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
                   ),
                 ],
               ),
@@ -323,9 +351,9 @@ class _AdminScreenState extends State<AdminScreen> {
               Wrap(
                 spacing: 16, runSpacing: 16,
                 children: [
-                  _buildStatsCard('إجمالي المبيعات', 'JOD ${stats['totalSales'].toStringAsFixed(2)}', 'منذ بداية المشروع', Icons.payments, Colors.blue, isMobile),
-                  _buildStatsCard('إجمالي المياه', '${stats['totalLiters'].toStringAsFixed(0)} لتر', 'إجمالي الكمية المباعة', Icons.opacity, Colors.cyan, isMobile),
-                  _buildStatsCard('عدد العمليات', '${stats['transactions']}', 'عمليات تعبئة ناجحة', Icons.receipt_long, Colors.indigo, isMobile),
+                  _buildStatsCard('إجمالي المبيعات', 'JOD ${totalSales.toStringAsFixed(2)}', 'منذ بداية المشروع', Icons.payments, Colors.blue, isMobile),
+                  _buildStatsCard('إجمالي المياه', '${totalLiters.toStringAsFixed(0)} لتر', 'إجمالي الكمية المباعة', Icons.opacity, Colors.cyan, isMobile),
+                  _buildStatsCard('عدد العمليات', '$refillCount', 'عمليات تعبئة ناجحة', Icons.receipt_long, Colors.indigo, isMobile),
                 ],
               ),
               const SizedBox(height: 40),
@@ -335,7 +363,7 @@ class _AdminScreenState extends State<AdminScreen> {
             ],
           ),
         );
-      }
+      },
     );
   }
 
@@ -393,25 +421,46 @@ class _AdminScreenState extends State<AdminScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        double? amount = double.tryParse(_topUpAmountController.text);
-                        if (amount == null || amount <= 0) return;
-                        
-                        final messenger = ScaffoldMessenger.of(context);
-                        
-                        await _dbService.topUpBalance(
-                          _foundCustomer!.id, 
-                          amount, 
-                          FirebaseAuth.instance.currentUser!.uid
-                        );
-                        
-                        messenger.showSnackBar(const SnackBar(content: Text('تم شحن الرصيد بنجاح')));
-                        _topUpPhoneController.clear();
-                        _topUpAmountController.clear();
-                        setState(() => _foundCustomer = null);
-                      },
+                      // [FIX #4] عملية مالية: لا بد من try-catch وحالة loading
+                      onPressed: _isTopUpLoading
+                          ? null
+                          : () async {
+                              final double? amount = double.tryParse(_topUpAmountController.text);
+                              if (amount == null || amount <= 0) return;
+                              final messenger = ScaffoldMessenger.of(context);
+                              setState(() => _isTopUpLoading = true);
+                              try {
+                                await _dbService.topUpBalance(
+                                  _foundCustomer!.id,
+                                  amount,
+                                  FirebaseAuth.instance.currentUser!.uid,
+                                );
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('✅ تم شحن الرصيد بنجاح'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                _topUpPhoneController.clear();
+                                _topUpAmountController.clear();
+                                setState(() => _foundCustomer = null);
+                              } catch (e) {
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('❌ فشل الشحن: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              } finally {
+                                if (mounted) setState(() => _isTopUpLoading = false);
+                              }
+                            },
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
-                      child: const Text('تأكيد الشحن'),
+                      child: _isTopUpLoading
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('تأكيد الشحن'),
                     ),
                   ),
                 ]
@@ -424,15 +473,9 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   Widget _buildSettingsSection(bool isMobile) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: _dbService.getAppSettings(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data!.exists) {
-          double price = snapshot.data!.get('price_per_liter')?.toDouble() ?? 0.026;
-          if (_priceController.text.isEmpty) {
-            _priceController.text = price.toString();
-          }
-        }
+    // [FIX #6] حذف StreamBuilder للإعدادات — السعر يُحمَّل مرة واحدة في initState
+    return Builder(
+      builder: (context) {
 
         return Padding(
           padding: const EdgeInsets.all(32),

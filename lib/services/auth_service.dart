@@ -51,7 +51,7 @@ class AuthService {
         case 'too-many-requests':
           throw 'محاولات كثيرة. الرجاء الانتظار قليلاً';
         default:
-          throw 'فشل تسجيل الدخول: ${e.message}';
+          throw 'فشل تسجيل الدخول: ${e.message ?? 'خطأ غير معروف'}';
       }
     } catch (e) {
       if (e is String) rethrow; // إذا كان الخطأ نصاً مرسلاً منا، قم برميه مباشرة
@@ -250,11 +250,8 @@ class AuthService {
     return false;
   }
 
-  // ─── حذف موظف (Firestore فقط — Auth يُحذف عبر Cloud Function) ─────────────
-  Future<void> deleteStaff(String uid) async {
-    await _db.collection('users').doc(uid).delete();
-    // ملاحظة: لحذف الحساب من Firebase Auth يجب استخدام Cloud Function
-  }
+  // [FIX #7] حُذفت deleteStaff من هنا — استخدم DatabaseService.deleteStaff فقط
+  // (كانت مكررة بنفس الجسم في DatabaseService مما يكسر مبدأ DRY)
 
   // ─── تحديث بيانات الموظف ──────────────────────────────────────────────────
   Future<void> updateStaffProfile({

@@ -5,14 +5,27 @@ import '../services/database_service.dart';
 import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 
-class HistoryScreen extends StatelessWidget {
+// [FIX #5] تحويل إلى StatefulWidget لمنع إنشاء stream subscription جديدة في كل rebuild
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final DatabaseService dbService = DatabaseService();
-    final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
 
+class _HistoryScreenState extends State<HistoryScreen> {
+  // [FIX #5] يُنشأ مرة واحدة فقط
+  final DatabaseService _dbService = DatabaseService();
+  late final String _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -32,7 +45,7 @@ class HistoryScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: StreamBuilder<List<TransactionModel>>(
-        stream: dbService.getCustomerHistory(uid),
+        stream: _dbService.getCustomerHistory(_uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
@@ -41,11 +54,11 @@ class HistoryScreen extends StatelessWidget {
             return _buildEmptyState(context);
           }
 
-          var transactions = snapshot.data!;
-          // Sort by timestamp descending
-          transactions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          // [FIX #5] نسخة جديدة بدون mutation لـ snapshot.data المباشر
+          final transactions = List<TransactionModel>.from(snapshot.data!)
+            ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
           
-          double totalLitersMonth = transactions
+          final double totalLitersMonth = transactions
               .where((tx) => tx.type == 'refill' && tx.timestamp.month == DateTime.now().month && tx.timestamp.year == DateTime.now().year)
               .fold(0, (sum, tx) => sum + tx.liters);
 
